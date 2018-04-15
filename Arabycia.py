@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import nltk
 import pyaramorph
@@ -11,8 +12,11 @@ class Arabica:
 	segmenter = None
 
 	raw_data = None
+	corpus = ''
 	analyzed_data = []
 	full_analyzed_data = []
+	processed_data = []
+	ambig_words = []
 
 	def __init__(self, raw_data=None):
 		self.analyzer = pyaramorph.Analyzer()
@@ -144,7 +148,8 @@ class Arabica:
 		"""
 		data = self.analyzer.analyze_text(self.raw_data)
 		self.full_analyzed_data = data[0]
-		return data
+		self.data_process()
+		return self.full_analyzed_data
 
 
 	def extract_data(self):
@@ -226,9 +231,6 @@ class Arabica:
 		key = self.transliteration(self.stem(key))
 		data = self.extract_data()
 
-		# print("Data   : ", data)
-		# print("Search : ", [search, key])
-
 		for i in range(0, len(data)):
 			if data[i]['root_transl'] == key:
 				result.append(data[i]['arabic'])
@@ -237,14 +239,52 @@ class Arabica:
 		return set(result)
 
 
-var = '''
-الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ
-الرَّحْمَٰنِ الرَّحِيمِ
-مَالِكِ يَوْمِ الدِّينِ
-إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ
-اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ
-صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ
-'''
+	def data_process(self):
+		"""
+			process the result data from pyaramorph & put it in organized way
+		"""
+		data = self.full_analyzed_data
+		all = []
+		for ele in range(0, len(data)):
+			solution = []
+			pos = []
+			gloss = []
+			eg = ''
+			ar = ''
+			for i in range(0, len(data[ele])):
+				for k, v in data[ele][i].items():
+					if k == 'transl': eg = v
+					if k == 'arabic': ar = v
+					if k == 'solution': solution.append(v)
+					if k == 'pos': pos.append(v)
+					if k == 'gloss': gloss.append(v)
+			temp = {'transl': eg, 'arabic': ar, 'solution': solution, 'pos': pos, 'gloss': gloss}
+			all.append(temp)
+		self.processed_data = all
 
-arab = Arabica(var)
-arab.search('رحم')
+	def load_corpus(self, filename):
+		print('Reading ' + filename)
+		f = open(filename, 'r', encoding='utf-8')
+		content = f.read()
+		segm_sent = self.segmenter.tokenize(content)
+		self.corpus = segm_sent
+
+	def ambig(self):
+		for w in self.processed_data:
+			temp = []
+			for sol in w['solution']:
+				temp.append(sol[2])
+				# print(sol[2])
+			if len(set(temp))>1:
+				self.ambig_words.append(w['arabic'])
+				# print(w['arabic'])
+
+
+text = 'كيف تحولت من مدينة للانوار إِلَى الاشباح'
+
+arab = Arabica(text)
+arab.analyze_text()
+arab.ambig()
+# arab.load_corpus('4.txt')
+# print(arab.processed_data)
+# print(arab.corpus)
