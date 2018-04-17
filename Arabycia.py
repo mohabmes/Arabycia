@@ -5,7 +5,7 @@ import re
 import pyaramorph
 
 
-class Arabica:
+class Arabycia:
 
 	analyzer = None
 	stemmer = None
@@ -13,6 +13,7 @@ class Arabica:
 	segmenter = None
 
 	raw_data = None
+	org_data = None
 	corpus = ''
 	analyzed_data = []
 	full_analyzed_data = []
@@ -28,11 +29,13 @@ class Arabica:
 
 		if raw_data is not None:
 			self.raw_data = raw_data
+			self.org_data = raw_data
 
 		self.analyze_text()
 		self.ambig()
-		self.load_corpus('Path_To_file')
+		self.load_corpus('4.txt')
 		self.select_cand()
+		# self.print_result()
 
 
 	def tokenization(self, txt):
@@ -381,3 +384,61 @@ class Arabica:
 		for i in range(0, len(words) - 1):
 			p *= self.prob(words[i], words[i + 1])
 		return p
+
+
+	def pos_split(self, pos):
+		data = ''
+		disc = ''
+		for i in pos:
+			if i == '':
+				continue
+			else:
+				str = i.split('/')
+				if data != '':
+					data += ' + ' + self.reverse_transliteration(str[0]).replace('+', '')
+					disc += ' + ' + str[1]
+				else:
+					data += self.reverse_transliteration(str[0]).replace('+', '')
+					disc += str[1].replace('+', '')
+
+		return data + '  ->  ('+disc+')'
+
+
+	def final_result(self):
+		result = []
+		sent = self.raw_data
+		sent = sent.split()
+
+		for itr in range(0, len(self.processed_data)):
+			# print(self.processed_data[itr]['transl'])
+			for p in range(0, len(self.processed_data[itr]['solution'])):
+
+				if self.processed_data[itr]['solution'][p][0] in sent:
+					result.append([
+						self.processed_data[itr]['solution'][p],
+						self.processed_data[itr]['gloss'][p],
+						self.processed_data[itr]['pos'][p]
+					])
+				break
+		return result
+
+
+	def print_result(self):
+		print('Sentence :')
+		print(self.org_data)
+		print('With Diacritics :')
+		print(self.raw_data)
+
+		data = self.final_result()
+
+		for i in data:
+			print('\nWord : ' + i[0][0] + '  (\'' + i[0][1] + '\')')
+			print('Gloss : ' + i[1][1].replace(';', '/'))
+			print('POS   : ' + self.pos_split(i[2]))
+
+
+
+text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
+
+ara = Arabycia(text)
+ara.print_result()
