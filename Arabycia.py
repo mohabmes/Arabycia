@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 import nltk
+import re
 import pyaramorph
 
 
@@ -18,6 +19,7 @@ class Arabica:
 	processed_data = []
 	ambig_words = []
 
+
 	def __init__(self, raw_data=None):
 		self.analyzer = pyaramorph.Analyzer()
 		self.stemmer = nltk.ISRIStemmer()
@@ -26,6 +28,11 @@ class Arabica:
 
 		if raw_data is not None:
 			self.raw_data = raw_data
+
+		self.analyze_text()
+		self.ambig()
+		self.load_corpus('Path_To_file')
+		self.select_cand()
 
 
 	def tokenization(self, txt):
@@ -119,6 +126,7 @@ class Arabica:
 		trans = pyaramorph.buckwalter.uni2buck(str)
 		return trans
 
+
 	@staticmethod
 	def reverse_transliteration(str):
 		"""
@@ -136,6 +144,7 @@ class Arabica:
 		"""
 		trans = pyaramorph.buckwalter.buck2uni(str)
 		return trans
+
 
 	def analyze_text(self):
 		"""
@@ -161,7 +170,7 @@ class Arabica:
 			----------
 			analyzed_data : array
 		"""
-		data, _ = self.analyze_text()
+		data = self.analyze_text()
 		for i in range(0, len(data)):
 			tans = data[i][0]['transl']
 			word = data[i][0]['arabic']
@@ -169,7 +178,7 @@ class Arabica:
 			possible_root = self.pam_stem(word)
 			rtrans = self.transliteration(root)
 			self.analyzed_data.append({'arabic': word, 'transl': tans, 'root': root, 'root_transl': rtrans, 'candidates': possible_root})
-		return self.analyzed_data
+		# return self.analyzed_data
 
 
 	def stem(self, word):
@@ -227,12 +236,12 @@ class Arabica:
 				original words from the text with the same root.
 		"""
 		result = []
-
-		key = self.transliteration(self.stem(key))
-		data = self.extract_data()
+		self.extract_data()
+		# key = key
+		data = self.analyzed_data
 
 		for i in range(0, len(data)):
-			if data[i]['root_transl'] == key:
+			if data[i]['root'] == key or key in data[i]['candidates']:
 				result.append(data[i]['arabic'])
 
 		print("Result : ", set(result))
@@ -262,29 +271,113 @@ class Arabica:
 			all.append(temp)
 		self.processed_data = all
 
+
 	def load_corpus(self, filename):
 		print('Reading ' + filename)
 		f = open(filename, 'r', encoding='utf-8')
 		content = f.read()
-		segm_sent = self.segmenter.tokenize(content)
-		self.corpus = segm_sent
+		# segm_sent = self.segmenter.tokenize(content)
+		# self.corpus = segm_sent
+		self.corpus = content
+
+
+	def replace_sub(self, text, str, sub):
+		nw = ''
+		for w in text.split():
+			if w == str:
+				nw += sub + " "
+			else:
+				nw += w + " "
+		return nw
+
 
 	def ambig(self):
 		for w in self.processed_data:
 			temp = []
+			# print(w)
 			for sol in w['solution']:
 				temp.append(sol[2])
-				# print(sol[2])
+				# print(sol)
 			if len(set(temp))>1:
 				self.ambig_words.append(w['arabic'])
 				# print(w['arabic'])
 
+		###### Tashkil ######
+		raw = self.raw_data
+		temp = raw
+		# print(raw)
+		for w in raw.split():
+			if w not in self.ambig_words:
+				for t in self.processed_data:
+					if t['arabic'] == w:
+						for sol in t['solution'][0]:
+							self.raw_data = self.replace_sub(self.raw_data, w, sol)
+							# print(sol, w)
+							break
 
-text = 'كيف تحولت من مدينة للانوار إِلَى الاشباح'
 
-arab = Arabica(text)
-arab.analyze_text()
-arab.ambig()
-# arab.load_corpus('4.txt')
-# print(arab.processed_data)
-# print(arab.corpus)
+	def find_word(self, key):
+		valid_sent = [w for w in self.corpus if re.search(key, w)]
+		return valid_sent
+
+
+	def generate_cand(self):
+		cand = []
+
+		for w in self.ambig_words:
+			temp = []
+			for itr in self.processed_data:
+				if itr['arabic'] == w:
+					# print(itr['solution'])
+					for sw in itr['solution']:
+						# print(sw[0])
+
+						if sw[0] in temp:
+							continue
+						else:
+							temp.append(sw[0])
+			cand.append(temp)
+		return cand
+
+
+	def select_cand(self):
+		cands = self.generate_cand()
+		ambgs = self.ambig_words
+		sent = self.raw_data
+		spsent = sent.split()
+
+		# Generate the subsent
+		for i in range(0, len(self.ambig_words)):
+			best_p = -1
+			best_word = ''
+			for ii in range(0, len(cands[i])):
+				subsent = ''
+				id = [spsent.index(w) for w in spsent if re.search(ambgs[i], w)][0]
+				subsent = spsent[id-1] + " " + cands[i][ii]
+				p = self.bigram(subsent)
+
+				if p > best_p:
+					best_p = p
+					best_word = cands[i][ii]
+
+			self.raw_data = self.replace_sub(self.raw_data, ambgs[i], best_word)
+
+
+	def prob(self, w1, w2):
+		# prob = count(w1 | w2) / count(w1)
+		key = str(w1) + str(w2)
+		count_w1_w2 = len([w for w in self.corpus.replace(' ', '').split() if re.search(key, w)])
+		key = str(w1)
+		count_w1 = len([w for w in self.corpus.replace(' ', '').split() if re.search(key, w)])
+		p = count_w1_w2 / float(count_w1 + 1)
+		if p == 0:
+			return count_w1 /1000
+		return p
+
+
+	def bigram(self, sents):
+		words = sents.split()
+		p = 1
+		for i in range(0, len(words) - 1):
+			p *= self.prob(words[i], words[i + 1])
+		return p
