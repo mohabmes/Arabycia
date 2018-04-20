@@ -14,7 +14,7 @@ class Arabycia:
 
 	raw_data = None
 	org_data = None
-	corpus = ''
+	corpus = None
 	analyzed_data = []
 	full_analyzed_data = []
 	processed_data = []
@@ -33,7 +33,7 @@ class Arabycia:
 
 		self.analyze_text()
 		self.ambig()
-		self.load_corpus('4.txt')
+		self.load_corpus('PATH_TO_CORPUS_FILE')
 		self.select_cand()
 		self.print_result()
 
@@ -388,6 +388,7 @@ class Arabycia:
 
 		data = self.final_result()
 		unique_wd =[]
+		res = None
 
 		for i in data:
 			if i[0][0] not in unique_wd:
@@ -408,14 +409,18 @@ class Arabycia:
 				for ii in range(0, len(gloss)):
 					Gloss += gloss[ii].replace(';', ' | ').replace('/', ' | ') + ' | '
 					POS = '| ' + self.pos_split(pos[ii])[1] + ' | '
-				print('\nWord  : ' + '\'' + i[0][0] + '\'')
-				print('Word  : ' + '\'' + self.pos_split(i[2])[0] + '\'')
-				print('trans : ' + trans)
-				print('Gloss : ' + Gloss)
-				print('POS   : ' + POS)
+				word = '\nWord  : \t\t' + '\'' + i[0][0] + '\''
+				word2 = '\nWord  : \t\t' + '\'' + self.pos_split(i[2])[0] + '\''
+				trans = '\ntrans : \t\t' + trans
+				Gloss = '\nGloss : \t\t' + Gloss
+				POS = '\nPOS   : \t\t' + POS
+				print(word, word2, trans, Gloss, POS)
+
+				res += word + word2 + trans + Gloss + POS + "\n"
+		return self.raw_data, res
 
 
-text = 'سجل هدف في الوقت القاتل's
-
-ara = Arabycia(text)
+# text = ' بسم الله الرحمن الرحيم يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
+# ara = Arabycia(text)
+# ara.search('رحم')
 # ara.print_result()
