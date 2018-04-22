@@ -33,7 +33,7 @@ class Arabycia:
 
 		self.analyze_text()
 		self.ambig()
-		self.load_corpus('PATH_TO_CORPUS_FILE')
+		self.load_corpus('Tashkeela')
 		self.select_cand()
 		self.print_result()
 
@@ -194,18 +194,24 @@ class Arabycia:
 		self.processed_data = all
 
 
-	def load_corpus(self, filename):
+	def load_corpus(self, corpus):
 		"""
 			Load Text files as a corpus (With diacritics [Tashkeela-arabic-diacritized-text-utf8-0.3]).
 			:param filename: path to the file
 			:return:
 		"""
-		print('Reading ' + filename)
-		f = open(filename, 'r', encoding='utf-8')
-		content = f.read()
-		# segm_sent = self.segmenter.tokenize(content)
-		# self.corpus = segm_sent
-		self.corpus = content
+		import os
+		sub_corpus_files = os.listdir(corpus)
+		for corpus_name in sub_corpus_files:
+			content_files = os.listdir("{}/{}".format(corpus, corpus_name))
+			for file in content_files:
+				filename = '{}/{}/{}'.format(corpus, corpus_name, file)
+				# print('Loading {} '.format(filename))
+				f = open(filename, 'r', encoding='utf-8')
+				content = f.read()
+				# segm_sent = self.segmenter.tokenize(content)
+				# self.corpus = segm_sent
+				self.corpus += content
 
 
 	def replace_sub(self, text, str, sub):
@@ -312,7 +318,7 @@ class Arabycia:
 			:param w2:
 			:return:
 		"""
-		key = str(w1) + str(w2)
+		key = w1 + w2
 		count_w1_w2 = len([w for w in self.corpus.replace(' ', '').split() if re.search(key, w)])
 		key = str(w1)
 		count_w1 = len([w for w in self.corpus.replace(' ', '').split() if re.search(key, w)])
@@ -409,6 +415,7 @@ class Arabycia:
 				for ii in range(0, len(gloss)):
 					Gloss += gloss[ii].replace(';', ' | ').replace('/', ' | ') + ' | '
 					POS = '| ' + self.pos_split(pos[ii])[1] + ' | '
+
 				word = '\nWord  : \t\t' + '\'' + i[0][0] + '\''
 				word2 = '\nWord  : \t\t' + '\'' + self.pos_split(i[2])[0] + '\''
 				trans = '\ntrans : \t\t' + trans
