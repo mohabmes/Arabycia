@@ -117,5 +117,5 @@ Result :  {'الرحيم', 'الرحمن'}
 - Need Enhancement to obtain high accuracy.
 
 ## Requirement
-- NTLK
-- Tashkeela
+- NLTK
+- Tashkeela v1
