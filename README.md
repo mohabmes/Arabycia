@@ -109,7 +109,6 @@ Result :  {'الرحيم', 'الرحمن'}
 
 ## Notes
 - Arabycia uses modified version of pyaramorph.
-- **Add Dict & table files from [pyaramorph](https://bitbucket.org/alexlee/pyaramorph) (ex. dictPrefixes, dictStems, tableAB, etc) to pyaramorph Directory.**
 - Arabycia uses [Tashkeela: Arabic diacritization corpus](https://sourceforge.net/projects/tashkeela/).
 
 ## Todo
