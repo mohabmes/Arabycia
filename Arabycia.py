@@ -5,6 +5,15 @@ import re
 import pyaramorph
 
 
+def swap(word_1, word_2):
+				tmp = word_1
+				word_1 = word_2
+				word_2 = tmp
+
+				return word_1, word_2
+
+
+
 class Arabycia:
 
 	analyzer = None
@@ -99,6 +108,32 @@ class Arabycia:
 		"""
 		trans = pyaramorph.buckwalter.buck2uni(str)
 		return trans
+
+
+	def similarty(self, word_1, word_2):
+					if len(word_2) < len(word_1):
+									word_1, word_2 = swap(word_1, word_2)
+
+					word_1_len = len(word_1)
+					word_2_len = len(word_2)
+
+					if word_1 == word_2:
+									return True
+
+					if self.stem(word_1) != self.stem(word_2):
+									return False
+
+					similarty_rate = 0;
+					for c_1 in range(0, word_1_len):
+									for c_2 in range(0, word_2_len):
+													if word_1[c_1] == word_2[c_2]:
+																	similarty_rate += 1
+
+					if similarty_rate == word_1_len:
+								# 	print(word_1 + " == " + word_2)
+									return True
+
+					return False
 
 
 	def analyze_text(self):
@@ -202,16 +237,19 @@ class Arabycia:
 		"""
 		import os
 		sub_corpus_files = os.listdir(corpus)
+
 		for corpus_name in sub_corpus_files:
 			content_files = os.listdir("{}/{}".format(corpus, corpus_name))
+
 			for file in content_files:
 				filename = '{}/{}/{}'.format(corpus, corpus_name, file)
 				# print('Loading {} '.format(filename))
+
 				f = open(filename, 'r', encoding='utf-8')
 				content = f.read()
-				# segm_sent = self.segmenter.tokenize(content)
-				# self.corpus = segm_sent
-				self.corpus += content
+				self.corpus += str(content) + " "
+
+				break
 
 
 	def replace_sub(self, text, str, sub):
@@ -241,26 +279,29 @@ class Arabycia:
 		"""
 		for w in self.processed_data:
 			temp = []
+			uniq = [] # get rid of any duplicate
 			for sol in w['solution']:
+				if sol[0] in uniq:
+					break
 				temp.append(sol[2])
+				uniq.append(sol[0])
 			if len(set(temp))>1:
 				self.ambig_words.append(w['arabic'])
+
+		self.ambig_words = list(set(self.ambig_words))
 
 		# Add diacritics
 		raw = self.raw_data
 		temp = raw
 		for w in raw.split():
 			if w not in self.ambig_words:
+				# print(w)
 				for t in self.processed_data:
 					if t['arabic'] == w:
-						for sol in t['solution'][0]:
-							self.raw_data = self.replace_sub(self.raw_data, w, sol)
-							break
-
-
-	# def find_word(self, key):
-	# 	valid_sent = [w for w in self.corpus if re.search(key, w)]
-	# 	return valid_sent
+						if t['solution']:
+										for sol in t['solution'][0]:
+											self.raw_data = self.replace_sub(self.raw_data, w, sol)
+											break
 
 
 	def generate_cand(self):
@@ -300,13 +341,15 @@ class Arabycia:
 			for ii in range(0, len(cands[i])):
 				subsent = ''
 				id = [spsent.index(w) for w in spsent if re.search(ambgs[i], w)][0]
-				subsent = spsent[id-1] + " " + cands[i][ii]
+				if id != 0:
+					subsent = spsent[id - 1] + " " + cands[i][ii]
+				else:
+					subsent = cands[i][ii] # Sentence starts with ambiguous Word
 				p = self.bigram(subsent)
 
 				if p > best_p:
 					best_p = p
 					best_word = cands[i][ii]
-
 			self.raw_data = self.replace_sub(self.raw_data, ambgs[i], best_word)
 
 
@@ -318,13 +361,18 @@ class Arabycia:
 			:param w2:
 			:return:
 		"""
-		key = w1 + w2
-		count_w1_w2 = len([w for w in self.corpus.replace(' ', '').split() if re.search(key, w)])
+		print(w1, w2)
+		count_w1_w2 = 0
+		dic = self.corpus.split()
+		for i in range(0, len(dic)-1):
+						if self.similarty(w1, dic[i]) and self.similarty(w2, dic[i+1]):
+										count_w1_w2 += 1
+
 		key = str(w1)
-		count_w1 = len([w for w in self.corpus.replace(' ', '').split() if re.search(key, w)])
+		count_w1 = len([w for w in self.corpus.split() if self.similarty(key, w)])
 		p = count_w1_w2 / float(count_w1 + 1)
-		if p == 0:
-			return count_w1 /1000
+		print(count_w1_w2)
+		print(count_w1)
 		return p
 
 
@@ -394,7 +442,7 @@ class Arabycia:
 
 		data = self.final_result()
 		unique_wd =[]
-		res = None
+		res = ''
 
 		for i in data:
 			if i[0][0] not in unique_wd:
