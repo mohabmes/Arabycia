@@ -44,18 +44,22 @@ class Analyzer:
 
     def analyze_text(self, text):
         """Generate analyses for each word in the given Arabic text."""
-        results = []
+
+        all_results = []
         tokens = _tokenize(text.strip())
 
         for token in tokens:
-            token = _clean_arabic(token)
-            buckword = buckwalter.uni2buck(token)
-            analyses, possible = self.analyze_word(buckword)
-            if len(analyses) >= 0:
-                analyses.insert(0, {"transl": buckword, "arabic": token})
+            if token is not "":
+                word_results = {}
+                token = _clean_arabic(token)
+                buckword = buckwalter.uni2buck(token)
+                analyses, possible = self.analyze_word(buckword)
+                # sys.exit()
+                if len(analyses) >= 0:
+                    word_results.update(transl=buckword, arabic=token, solution=analyses)
 
-            results.append(analyses)
-        return results, possible
+                all_results.append(word_results)
+        return all_results
 
     def analyze_word(self, word):
         """Return all possible analyses for the given word"""
@@ -67,7 +71,6 @@ class Analyzer:
         for prefix, stem, suffix in segments:
             possible.append(stem)
             analyses.extend(self._check_segment(prefix, stem, suffix))
-        #print(analyses)
         return analyses, possible
 
     def _check_segment(self, prefix, stem, suffix):
@@ -111,8 +114,11 @@ class Analyzer:
                         pos_a, pos_b, pos_c, \
                         gloss_a, gloss_b, gloss_c))
 					'''
-                    analyses.append({"solution":  [univoc, buckvoc, lemmaID], "pos": [pos_a, pos_b, pos_c], "gloss": [gloss_a, gloss_b, gloss_c]})
-
+                    analyses.append({
+                        "word": [univoc, buckvoc, lemmaID], \
+                        "pos": [pos_a, pos_b, pos_c], \
+                        "gloss": [gloss_a, gloss_b,gloss_c]
+                    })
 
         return analyses
 
@@ -136,4 +142,3 @@ class Analyzer:
                 segments.append(segment)
 
         return segments
-
