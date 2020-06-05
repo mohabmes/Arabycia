@@ -35,12 +35,12 @@ class Arabycia:
 		print(self.diacritized_text)
 		print(self.diacritized_text_pos)
 
-		for x in range(0, len(self.ambiguous_words)):
-			print(self.ambiguous_words[x])
-			for solution in self.candidates[x][0]['solution']:
-				print(solution)
+		# for x in range(0, len(self.ambiguous_words)):
+		# 	print(self.ambiguous_words[x])
+		# 	for solution in self.candidates[x][0]['solution']:
+		# 		print(solution)
 
-		# self.select_candidate()
+		self.select_candidate()
 		# self.load_corpus("SinaiCorpus/src/Sinai-corpus.zip")
 		# self.print_result()
 
@@ -210,7 +210,7 @@ class Arabycia:
 				for possible_word in self.full_analyzed_data:
 					if possible_word['arabic'] == word:
 						diacritized_word = possible_word['solution'][0]['word'][0]
-						diacritized_word_pos = possible_word['solution'][0]['pos'][1].split("/")[1]
+						diacritized_word_pos = possible_word['solution'][0]['pos'][1]
 						self.diacritized_text_pos += diacritized_word_pos + " "
 						self.diacritized_text = self.diacritized_text.replace(word, diacritized_word)
 			else:
@@ -233,6 +233,10 @@ class Arabycia:
 		self.candidates = candidates
 		return self.candidates
 
+	def find_index(self, word):
+		text = self.raw_text.split()
+		return text.index(word)
+
 
 	def select_candidate(self):
 		"""
@@ -242,7 +246,23 @@ class Arabycia:
 		"""
 		candidates = self.candidates
 		ambiguous = self.ambiguous_words
+		words = self.raw_text.split()
+		pos = self.diacritized_text_pos.split()
 
+		for i in range(0,len(words)):
+			# print(pos[i-1])
+			if pos[i] == "?" and pos[i-1] != "?" and (i-1)>=0:
+				NEXT = self.find_index(words[i])
+				PERV = NEXT - 1
+				print("-> ", words[PERV], words[NEXT])
+				# print("->> ", pos[PERV])
+
+				cand_index = ambiguous.index(words[NEXT])
+				for solution in candidates[cand_index][0]['solution']:
+					cand_pos = solution['pos'][1]
+					print("-->> ", pos[PERV], " ", cand_pos)
+
+		exit()
 		spsent = self.raw_text.split()
 		for i in range(0, len(ambiguous)):
 			best_p = -1
@@ -384,7 +404,8 @@ class Arabycia:
 	# 	return self.raw_data, res
 
 
-text = ' بسم الله الرحمن الرحيم يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
+text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
+text_ = 'بسم الله الرحمن الرحيم'
 arabycia = Arabycia()
 arabycia.set_raw_text(text)
 # arabycia.test()
