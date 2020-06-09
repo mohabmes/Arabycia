@@ -23,7 +23,7 @@ class Arabycia:
 
 	raw_data = None
 	org_data = None
-	corpus = None
+	corpus = ""
 	analyzed_data = []
 	full_analyzed_data = []
 	processed_data = []
@@ -361,7 +361,6 @@ class Arabycia:
 			:param w2:
 			:return:
 		"""
-		print(w1, w2)
 		count_w1_w2 = 0
 		dic = self.corpus.split()
 		for i in range(0, len(dic)-1):
@@ -371,8 +370,7 @@ class Arabycia:
 		key = str(w1)
 		count_w1 = len([w for w in self.corpus.split() if self.similarty(key, w)])
 		p = count_w1_w2 / float(count_w1 + 1)
-		print(count_w1_w2)
-		print(count_w1)
+
 		return p
 
 
@@ -475,7 +473,5 @@ class Arabycia:
 		return self.raw_data, res
 
 
-# text = ' بسم الله الرحمن الرحيم يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
+# text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
 # ara = Arabycia(text)
-# ara.search('رحم')
-# ara.print_result()
