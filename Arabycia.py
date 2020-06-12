@@ -39,9 +39,9 @@ class Arabycia:
 		# 	print(self.ambiguous_words[x])
 		# 	for solution in self.candidates[x][0]['solution']:
 		# 		print(solution)
-
+		self.load_corpus("SinaiCorpus/src/Sinai-corpus.zip", 60)
 		self.select_candidate()
-		# self.load_corpus("SinaiCorpus/src/Sinai-corpus.zip")
+
 		# self.print_result()
 
 
@@ -169,13 +169,14 @@ class Arabycia:
 	# 	print("Result : ", set(result))
 	# 	return set(result)
 
-	def load_corpus(self, path):
+	def load_corpus(self, path, filenum = 50):
 		"""
 			Load all Sinai-Corpus content
 			:param filename: path to the file
 			:return:
 		"""
-		self.corpus = SinaiCorpusload.load_corpus(path)
+		self.corpus = SinaiCorpusload.load_corpus(path, filenum)
+		self.corpus = self.corpus.split('\n')
 		return self.corpus
 
 	def find_ambiguity(self):
@@ -250,39 +251,49 @@ class Arabycia:
 		pos = self.diacritized_text_pos.split()
 
 		for i in range(0,len(words)):
-			# print(pos[i-1])
 			if pos[i] == "?" and pos[i-1] != "?" and (i-1)>=0:
 				NEXT = self.find_index(words[i])
 				PERV = NEXT - 1
 				print("-> ", words[PERV], words[NEXT])
-				# print("->> ", pos[PERV])
-
 				cand_index = ambiguous.index(words[NEXT])
+
+				prob = 0
+				cand_best = -1
+				ocurrence_count_best = -1
 				for solution in candidates[cand_index][0]['solution']:
 					cand_pos = solution['pos'][1]
-					print("-->> ", pos[PERV], " ", cand_pos)
+					current_cand_prob, ocurrence_count = self.prob(pos[PERV], cand_pos)
+					print(current_cand_prob, " ", ocurrence_count)
+					if current_cand_prob > prob or (current_cand_prob == prob and ocurrence_count > ocurrence_count_best):
+						prob = current_cand_prob
+						cand_best = solution
+						ocurrence_count_best = ocurrence_count
 
-		exit()
-		spsent = self.raw_text.split()
-		for i in range(0, len(ambiguous)):
-			best_p = -1
-			best_word = ''
-			for ii in range(0, len(candidates[i])):
-				id = [spsent.index(w) for w in spsent if re.search(candidates[i], w)][0]
-				print(id)
-				if id != 0:
-					subsent = spsent[id - 1] + " " + candidates[i][ii]
-				else:
-					subsent = candidates[i][ii] # Sentence starts with ambiguous Word
-				# p = self.bigram(subsent)
-				#
-				# if p > best_p:
-				# 	best_p = p
-				# 	best_word = candidates[i][ii]
-			self.raw_data = self.replace_sub(self.raw_data, candidates[i], best_word)
+				print("-->> ", cand_best )
+				self.diacritized_text = self.diacritized_text.replace(words[NEXT], cand_best['word'][0])
+				pos[i] = cand_best['pos'][1]
+				self.diacritized_text_pos = " ".join(pos)
+				print(self.diacritized_text)
+				print(self.diacritized_text_pos)
 
+	def search(self, text, key):
+		return [sent for sent in text if re.search(key, sent)]
 
-	def prob(self, w1, w2):
+	def get_subsentences(self, sents, key):
+		subsentences = []
+		for sent in sents:
+			words = sent.split()
+			for i in range(0, len(words)):
+				if key in words[i] and i >= 0 and i < len(words) - 1:
+					subsentences.append(words[i + 1])
+		return subsentences
+
+	def split(self, str, returnval="pos"):
+		str = str.split('/')
+		if returnval is "pos": return str[1]
+		else: return str[0]
+
+	def prob(self, word1, word2):
 		"""
 			compute the probability of the given two words.
 			prob = count(w1 | w2) / count(w1)
@@ -290,32 +301,20 @@ class Arabycia:
 			:param w2:
 			:return:
 		"""
-		print(w1, w2)
-		count_w1_w2 = 0
-		dic = self.corpus.split()
-		for i in range(0, len(dic)-1):
-						if self.similarty(w1, dic[i]) and self.similarty(w2, dic[i+1]):
-										count_w1_w2 += 1
 
-		key = str(w1)
-		count_w1 = len([w for w in self.corpus.split() if self.similarty(key, w)])
-		p = count_w1_w2 / float(count_w1 + 1)
-		print(count_w1_w2)
-		print(count_w1)
-		return p
+		w1 = self.split(word1, "pos")
+		w2 = self.split(word2, "pos")
+		count_word2 = len(self.search(self.corpus, self.split(word2, "word")))
+		filter = self.search(self.corpus, w1)
+		count_w1 = self.get_subsentences(filter, w1)
+		count_w1_w2 = self.search(count_w1, w2)
 
 
-	def bigram(self, sents):
-		"""
-			Apply bigram to sentence
-			:param sents: sentence of two words at least.
-			:return: probability
-		"""
-		words = sents.split()
-		p = 1
-		for i in range(0, len(words) - 1):
-			p *= self.prob(words[i], words[i + 1])
-		return p
+		prob = len(count_w1_w2) / float(len(count_w1))
+		if w1 == w2: prob /= 2
+
+		return prob, count_word2
+
 
 
 	# def pos_split(self, pos):
@@ -405,7 +404,7 @@ class Arabycia:
 
 
 text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
-text_ = 'بسم الله الرحمن الرحيم'
+# text_ = 'بسم الله الرحمن الرحيم'
 arabycia = Arabycia()
 arabycia.set_raw_text(text)
 # arabycia.test()
