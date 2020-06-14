@@ -54,7 +54,6 @@ class Analyzer:
                 token = _clean_arabic(token)
                 buckword = buckwalter.uni2buck(token)
                 analyses, possible = self.analyze_word(buckword)
-                # sys.exit()
                 if len(analyses) >= 0:
                     word_results.update(transl=buckword, arabic=token, solution=analyses)
 
@@ -64,7 +63,6 @@ class Analyzer:
     def analyze_word(self, word):
         """Return all possible analyses for the given word"""
         analyses = []
-        count = 0
         segments = self._build_segments(word)
         possible = []
 
@@ -104,8 +102,8 @@ class Analyzer:
                     # Ok, it passed!
                     buckvoc = "%s%s%s" % (voc_a, voc_b, voc_c)
                     univoc = buckwalter.buck2uni(buckvoc)
-                    if gloss_a == '': gloss_a = '___'
-                    if gloss_c == '': gloss_c = '___'
+                    # if gloss_a == '': gloss_a = '___'
+                    # if gloss_c == '': gloss_c = '___'
                     '''analyses.append(
                         "    solution: (%s %s) [%s]\n"
                         "         pos: %s%s%s\n"
