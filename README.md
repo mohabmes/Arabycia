@@ -11,9 +11,9 @@ Arabic NLP tool Built using NLTK, Pyaramorph, and Tashkeela to perform:
 ```
 
 text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
- 
-ara = Arabycia(text)
-ara.print_result() 
+arabycia = Arabycia()
+arabycia.set_raw_text(text)
+arabycia.analyze()
 
 ```
 ##### Output
@@ -22,67 +22,61 @@ ara.print_result()
 Sentence :
 يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح
 With Diacritics :
-يَسْتَعِيد الكاتِب فِي هٰذِهِ الرِوايَة كَيْفَ تَحَوَّلْتُ مِن مَدِينَة لِلأَنْوار إِلَيَّ مَدِينَة لِلأَشْباح 
+يَسْتَعِيد الكاتِب فِي هٰذِهِ الرِوايَة كَيْفَ تَحَوَّلْتُ مِن مَدِينَة لِلأَنْوار إِلَى مَدِينَة لِلأَشْباح
+POS :
+sotaEiyd/VERB_IMPERFECT kAtib/NOUN fiy/PREP h`*ihi/DEM_PRON_F riwAy/NOUN kayofa/REL_PRON taHaw~al/VERB_PERFECT min/PREP madiyn/NOUN >anowAr/NOUN <ilaY/PREP madiyn/NOUN >a$obAH/NOUN
 
-Word  : 'يَسْتَعِيد'
-trans : 'yasotaEiyd'
-Gloss : | recover | regain | reclaim | 
-POS   : | IV3MS + VERB_IMPERFECT | 
+Word  : 	يَسْتَعِيد | yasotaEiyd | {isotaEAd_1 
+POS   : 	ya/IV3MS+ sotaEiyd/VERB_IMPERFECT  
+Gloss : 	he/it recover;regain;reclaim 
 
-Word  : 'الكاتِب'
-trans : 'AlkAtib'
-Gloss : | writer | author | clerk | writing | 
-POS   : | DET + NOUN | 
+Word  : 	هٰذِهِ | h`*ihi | h`*A_1 
+POS   : 	h`*ihi/DEM_PRON_F  
+Gloss : 	this/these 
 
-Word  : 'فِي'
-trans : 'fiy'
-Gloss : | in | V. | 
-POS   : | PREP | 
+Word  : 	لِلأَنْوار | lil>anowAr | nuwr_2 
+POS   : 	li/PREP+Al/DET+ >anowAr/NOUN  
+Gloss : 	to/for + the lights 
 
-Word  : 'هٰذِهِ'
-trans : 'h`*ihi'
-Gloss : | this | these | 
-POS   : | DEM_PRON_F | 
+Word  : 	لِلأَشْباح | lil>a$obAH | $abaH_1 
+POS   : 	li/PREP+Al/DET+ >a$obAH/NOUN  
+Gloss : 	to/for + the specters;shapes 
 
-Word  : 'الرِوايَة'
-trans : 'AlriwAyap'
-Gloss : | story | novel | report | account | 
-POS   : | DET + NOUN + NSUFF_FEM_SG | 
+Word  : 	الكاتِب | AlkAtib | kAtib_1 
+POS   : 	Al/DET+ kAtib/NOUN  
+Gloss : 	the writer;author 
 
-Word  : 'كَيْفَ'
-trans : 'kayofa'
-Gloss : | how | 
-POS   : | REL_PRON | 
+Word  : 	فِي | fiy | fiy_1 
+POS   : 	fiy/PREP  
+Gloss : 	in 
 
-Word  : 'تَحَوَّلْتُ'
-trans : 'taHaw~alotu'
-Gloss : | be changed | be transformed | 
-POS   : | VERB_PERFECT + PVSUFF_SUBJ:1S | 
+Word  : 	الرِوايَة | AlriwAyap | riwAyap_1 
+POS   : 	Al/DET+ riwAy/NOUN +ap/NSUFF_FEM_SG 
+Gloss : 	the story;novel [fem.sg.]
 
-Word  : 'مِن'
-trans : 'min'
-Gloss : | from | 
-POS   : | PREP | 
+Word  : 	كَيْفَ | kayofa | kayofa_1 
+POS   : 	kayofa/REL_PRON  
+Gloss : 	how 
 
-Word  : 'مَدِينَة'
-trans : 'madiynap'
-Gloss : | owing | obligated | debtor | city | Medina | 
-POS   : | ADJ + NSUFF_FEM_SG | 
+Word  : 	تَحَوَّلْتُ | taHaw~alotu | taHaw~al_1 
+POS   : 	taHaw~al/VERB_PERFECT +tu/PVSUFF_SUBJ:1S 
+Gloss : 	be changed;be transformed I <verb>
 
-Word  : 'لِلأَنْوار'
-trans : 'lil>anowAr'
-Gloss : | lights | 
-POS   : | PREPAl + NOUN | 
+Word  : 	مِن | min | min_1 
+POS   : 	min/PREP  
+Gloss : 	from 
 
-Word  : 'إِلَيَّ'
-trans : '<ilay~a'
-Gloss : | to | towards | 
-POS   : | PREP + PRON_1S | 
+Word  : 	مَدِينَة | madiynap | madiynap_1 
+POS   : 	madiyn/NOUN +ap/NSUFF_FEM_SG 
+Gloss : 	city [fem.sg.]
 
-Word  : 'لِلأَشْباح'
-trans : 'lil>a$obAH'
-Gloss : | specters | shapes | 
-POS   : | PREPAl + NOUN | 
+Word  : 	إِلَى | <ilaY | <ilaY_1 
+POS   : 	<ilaY/PREP  
+Gloss : 	to;towards 
+
+Word  : 	مَدِينَة | madiynap | madiynap_1 
+POS   : 	madiyn/NOUN +ap/NSUFF_FEM_SG 
+Gloss : 	city [fem.sg.]
 
 ```
 
@@ -108,13 +102,9 @@ Result :  {'الرحيم', 'الرحمن'}
 ```
 
 ## Notes
-- Arabycia uses modified version of pyaramorph.
-- Arabycia uses [Tashkeela: Arabic diacritization corpus](https://sourceforge.net/projects/tashkeela/).
+- Arabycia uses modified version of pyaramorph (rewritten for better data manipulation).
+- Arabycia uses [Sinai-corpus: Arabic tagged corpus](https://github.com/mohabmes/Sinai-corpus).
 
-## Todo
-- The code is messy, it needs a bit organization.
-- Need Enhancement to obtain high accuracy.
 
 ## Requirement
 - NLTK
-- Tashkeela v1
