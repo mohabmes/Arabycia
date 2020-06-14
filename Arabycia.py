@@ -6,21 +6,6 @@ import pyaramorph
 import SinaiCorpus.load as SinaiCorpusload
 
 class Arabycia:
-
-	# analyzer = None
-	# stemmer = None
-	# lemmatizer = None
-	# segmenter = None
-	#
-	# raw_data = None
-	# org_data = None
-	# corpus = None
-	# analyzed_data = []
-	# full_analyzed_data = []
-	# processed_data = []
-	# ambig_words = []
-
-
 	def __init__(self):
 		self.raw_text = text
 		self.analyzer = pyaramorph.Analyzer()
@@ -30,19 +15,9 @@ class Arabycia:
 		self.analyze_text()
 		self.find_ambiguity()
 		self.generate_candidates()
-
-		print(self.raw_text)
-		print(self.diacritized_text)
-		print(self.diacritized_text_pos)
-
-		# for x in range(0, len(self.ambiguous_words)):
-		# 	print(self.ambiguous_words[x])
-		# 	for solution in self.candidates[x][0]['solution']:
-		# 		print(solution)
 		self.load_corpus("SinaiCorpus/src/Sinai-corpus.zip", 60)
 		self.select_candidate()
-
-		# self.print_result()
+		self.print_result()
 
 
 	def tokenization(self, txt):
@@ -114,19 +89,6 @@ class Arabycia:
 		stem = str(self.stemmer.stem(word))
 		return stem
 
-	def pam_stem(self, str):
-		"""
-			Get all root candidates.
-			[Before using compatibility Table to eliminate some]
-			:param str: string : Word.
-			:return: stems : array : all root candidates
-		"""
-		stems = []
-		data = self.analyzer.analyze_text(str)[1]
-		for i in data:
-			stems.append(self.reverse_transliteration(i))
-		return stems
-
 	def analyze_text(self):
 		"""
 			apply some analysis to a text ('raw_data') using pyaramorph lib
@@ -135,21 +97,6 @@ class Arabycia:
 		if len(self.raw_text):
 			self.full_analyzed_data = self.analyzer.analyze_text(self.raw_text)
 			return self.full_analyzed_data
-
-	# def extract_data(self):
-	# 	"""
-	# 		Extract some useful data from analyze_text() result
-	# 		[ex. arabic word, transliteration, root, etc.] for each token from 'raw_data'
-	# 		:return: analyzed_data : array
-	# 	"""
-	# 	data = self.analyze_text()
-	# 	for i in range(0, len(data)):
-	# 		tans = data[i][0]['transl']
-	# 		word = data[i][0]['arabic']
-	# 		root = self.stem(data[i][0]['arabic'])
-	# 		possible_root = self.pam_stem(word)
-	# 		rtrans = self.transliteration(root)
-	# 		self.analyzed_data.append({'arabic': word, 'transl': tans, 'root': root, 'root_transl': rtrans, 'candidates': possible_root})
 
 
 	# def search(self, key):
@@ -197,11 +144,12 @@ class Arabycia:
 
 	def solve_unambiguity(self):
 		"""
-					Solve any unambiguous word, and add its diacritics.
-					Note: After text_analysis the word with one solution is considered unambiguous, otherwise it's ambiguous)
-					add diacritics for unambiguous words
-					:return:
+			Solve any unambiguous word, and add its diacritics.
+			Note: After text_analysis the word with one solution is considered unambiguous, otherwise it's ambiguous)
+			add diacritics for unambiguous words
+			:return:
 		"""
+		self.analyzed_text_result = []
 		self.diacritized_text = self.raw_text
 		self.diacritized_text_pos = ""
 		raw = self.raw_text
@@ -214,6 +162,12 @@ class Arabycia:
 						diacritized_word_pos = possible_word['solution'][0]['pos'][1]
 						self.diacritized_text_pos += diacritized_word_pos + " "
 						self.diacritized_text = self.diacritized_text.replace(word, diacritized_word)
+						self.analyzed_text_result.append({'transl': possible_word['transl'],
+														  'arabic': possible_word['arabic'],
+														  'word': possible_word['solution'][0]['word'],
+														  'pos': possible_word['solution'][0]['pos'],
+														  'gloss': possible_word['solution'][0]['gloss']
+														  })
 			else:
 				self.diacritized_text_pos += "? "
 		return self.diacritized_text
@@ -254,27 +208,30 @@ class Arabycia:
 			if pos[i] == "?" and pos[i-1] != "?" and (i-1)>=0:
 				NEXT = self.find_index(words[i])
 				PERV = NEXT - 1
-				print("-> ", words[PERV], words[NEXT])
 				cand_index = ambiguous.index(words[NEXT])
-
 				prob = 0
 				cand_best = -1
 				ocurrence_count_best = -1
+				transl = candidates[cand_index][0]['transl']
+				arabic = candidates[cand_index][0]['arabic']
 				for solution in candidates[cand_index][0]['solution']:
 					cand_pos = solution['pos'][1]
 					current_cand_prob, ocurrence_count = self.prob(pos[PERV], cand_pos)
-					print(current_cand_prob, " ", ocurrence_count)
 					if current_cand_prob > prob or (current_cand_prob == prob and ocurrence_count > ocurrence_count_best):
 						prob = current_cand_prob
 						cand_best = solution
 						ocurrence_count_best = ocurrence_count
-
-				print("-->> ", cand_best )
 				self.diacritized_text = self.diacritized_text.replace(words[NEXT], cand_best['word'][0])
 				pos[i] = cand_best['pos'][1]
 				self.diacritized_text_pos = " ".join(pos)
-				print(self.diacritized_text)
-				print(self.diacritized_text_pos)
+
+				self.analyzed_text_result.append({'transl': transl,
+												  'arabic': arabic,
+												  'word': cand_best['word'],
+												  'pos': cand_best['pos'],
+												  'gloss': cand_best['gloss'] })
+
+		return self.analyzed_text_result
 
 	def search(self, text, key):
 		return [sent for sent in text if re.search(key, sent)]
@@ -316,95 +273,29 @@ class Arabycia:
 		return prob, count_word2
 
 
+	def print_result(self):
+		"""
+			Reformat the output & print it.
+			:return:
+		"""
+		print('Sentence :')
+		print(self.raw_text)
+		print('With Diacritics :')
+		print(self.diacritized_text)
+		print('POS :')
+		print(self.diacritized_text_pos)
 
-	# def pos_split(self, pos):
-	# 	"""
-	# 		Used to split (preprocess) POS before printing it.
-	# 		:param pos: string
-	# 		:return:
-	# 	"""
-	# 	data = ''
-	# 	disc = ''
-	# 	for i in pos:
-	# 		if i == '':
-	# 			continue
-	# 		else:
-	# 			str = i.split('/')
-	# 			if data != '':
-	# 				data += ' + ' + self.reverse_transliteration(str[0]).replace('+', '')
-	# 				disc += ' + ' + str[1]
-	# 			else:
-	# 				data += self.reverse_transliteration(str[0]).replace('+', '')
-	# 				disc += str[1].replace('+', '')
-	# 	return data, disc
+		for result in self.analyzed_text_result:
+			word = '\nWord  : \t' + " | ".join(result['word'])
+			gloss = '\nGloss : \t' + " ".join(result['gloss'])
+			pos = '\nPOS   : \t' + " + ".join(result['pos'])
+			print(word, pos, gloss)
 
-
-	# def final_result(self):
-	# 	"""
-	# 		Prepare the final result
-	# 		:return: list contain the final result
-	# 	"""
-	# 	result = []
-	# 	sent = self.raw_data
-	# 	sent = sent.split()
-	# 	for itr in range(0, len(self.processed_data)):
-	# 		for p in range(0, len(self.processed_data[itr]['solution'])):
-	# 			if self.processed_data[itr]['solution'][p][0] in sent:
-	# 				result.append([
-	# 					self.processed_data[itr]['solution'][p],
-	# 					self.processed_data[itr]['gloss'][p],
-	# 					self.processed_data[itr]['pos'][p]
-	# 				])
-	# 	return result
-
-
-	# def print_result(self):
-	# 	"""
-	# 		Reformat the output & print it.
-	# 		:return:
-	# 	"""
-	# 	print('Sentence :')
-	# 	print(self.org_data)
-	# 	print('With Diacritics :')
-	# 	print(self.raw_data)
-	#
-	# 	data = self.final_result()
-	# 	unique_wd =[]
-	# 	res = ''
-	#
-	# 	for i in data:
-	# 		if i[0][0] not in unique_wd:
-	# 			unique_wd.append(i[0][0])
-	# 			Gloss = '| '
-	# 			POS = '| '
-	# 			trans = '\'' + i[0][1] + '\''
-	#
-	# 			gloss = []
-	# 			pos = []
-	#
-	# 			for dup in data:
-	# 				if dup[0][0] == i[0][0]:
-	# 					if dup[1][1] not in gloss:
-	# 						gloss.append(dup[1][1])
-	# 						pos.append(i[2])
-	#
-	# 			for ii in range(0, len(gloss)):
-	# 				Gloss += gloss[ii].replace(';', ' | ').replace('/', ' | ') + ' | '
-	# 				POS = '| ' + self.pos_split(pos[ii])[1] + ' | '
-	#
-	# 			word = '\nWord  : \t\t' + '\'' + i[0][0] + '\''
-	# 			word2 = '\nWord  : \t\t' + '\'' + self.pos_split(i[2])[0] + '\''
-	# 			trans = '\ntrans : \t\t' + trans
-	# 			Gloss = '\nGloss : \t\t' + Gloss
-	# 			POS = '\nPOS   : \t\t' + POS
-	# 			print(word, word2, trans, Gloss, POS)
-	#
-	# 			res += word + word2 + trans + Gloss + POS + "\n"
-	# 	return self.raw_data, res
+		return self.analyzed_text_result
 
 
 text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
-# text_ = 'بسم الله الرحمن الرحيم'
+# text = 'يستجمع الكاتب أفكاره'
 arabycia = Arabycia()
 arabycia.set_raw_text(text)
 # arabycia.test()
