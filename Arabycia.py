@@ -3,49 +3,23 @@ from __future__ import unicode_literals
 import nltk
 import re
 import pyaramorph
-
-
-def swap(word_1, word_2):
-				tmp = word_1
-				word_1 = word_2
-				word_2 = tmp
-
-				return word_1, word_2
-
-
+import SinaiCorpus.load as SinaiCorpusload
 
 class Arabycia:
 
-	analyzer = None
-	stemmer = None
-	lemmatizer = None
-	segmenter = None
-
-	raw_data = None
-	org_data = None
-	corpus = ""
-	analyzed_data = []
-	full_analyzed_data = []
-	processed_data = []
-	ambig_words = []
-
-
-	def __init__(self, raw_data=None):
+	def __init__(self):
 		self.analyzer = pyaramorph.Analyzer()
 		self.stemmer = nltk.ISRIStemmer()
 		self.lemmatizer = nltk.WordNetLemmatizer()
 		self.segmenter = nltk.data.load("tokenizers/punkt/english.pickle")
 
-		if raw_data is not None:
-			self.raw_data = raw_data
-			self.org_data = raw_data
-
+	def analyze(self):
 		self.analyze_text()
-		self.ambig()
-		self.load_corpus('Tashkeela')
-		self.select_cand()
+		self.find_ambiguity()
+		self.generate_candidates()
+		self.load_corpus("SinaiCorpus/src/Sinai-corpus.zip", 60)
+		self.select_candidate()
 		self.print_result()
-
 
 	def tokenization(self, txt):
 		"""
@@ -56,16 +30,14 @@ class Arabycia:
 		tokens = nltk.word_tokenize(txt)
 		return tokens
 
-
 	def stemming(self, txt):
 		"""
 			Apply Arabic Stemming without a root dictionary, using nltk's ISRIStemmer.
 			:param txt: string : arabic text
 			:return: stems : array : array contains a stem for each word in the text
 		"""
-		stems = str([self.stemmer.stem(w) for w in self.tokenization(txt)])
+		stems = [self.stemmer.stem(w) for w in self.tokenization(txt)]
 		return stems
-
 
 	def lemmatization(self, txt):
 		"""
@@ -77,6 +49,8 @@ class Arabycia:
 		lemmas = str([self.lemmatizer.lemmatize(w) for w in self.tokenization(txt)])
 		return lemmas
 
+	def set_raw_text(self, text):
+		self.raw_text = text
 
 	def segmentation(self, txt):
 		"""
@@ -86,7 +60,6 @@ class Arabycia:
 		"""
 		sents = self.segmenter.tokenize(txt)
 		return sents
-
 
 	@staticmethod
 	def transliteration(str):
@@ -98,7 +71,6 @@ class Arabycia:
 		trans = pyaramorph.buckwalter.uni2buck(str)
 		return trans
 
-
 	@staticmethod
 	def reverse_transliteration(str):
 		"""
@@ -109,60 +81,6 @@ class Arabycia:
 		trans = pyaramorph.buckwalter.buck2uni(str)
 		return trans
 
-
-	def similarty(self, word_1, word_2):
-					if len(word_2) < len(word_1):
-									word_1, word_2 = swap(word_1, word_2)
-
-					word_1_len = len(word_1)
-					word_2_len = len(word_2)
-
-					if word_1 == word_2:
-									return True
-
-					if self.stem(word_1) != self.stem(word_2):
-									return False
-
-					similarty_rate = 0;
-					for c_1 in range(0, word_1_len):
-									for c_2 in range(0, word_2_len):
-													if word_1[c_1] == word_2[c_2]:
-																	similarty_rate += 1
-
-					if similarty_rate == word_1_len:
-								# 	print(word_1 + " == " + word_2)
-									return True
-
-					return False
-
-
-	def analyze_text(self):
-		"""
-			apply some analysis to a text ('raw_data') using pyaramorph lib
-			:return: sents : array : the analysis data
-		"""
-		data = self.analyzer.analyze_text(self.raw_data)
-		self.full_analyzed_data = data[0]
-		self.data_process()
-		return self.full_analyzed_data
-
-
-	def extract_data(self):
-		"""
-			Extract some useful data from analyze_text() result
-			[ex. arabic word, transliteration, root, etc.] for each token from 'raw_data'
-			:return: analyzed_data : array
-		"""
-		data = self.analyze_text()
-		for i in range(0, len(data)):
-			tans = data[i][0]['transl']
-			word = data[i][0]['arabic']
-			root = self.stem(data[i][0]['arabic'])
-			possible_root = self.pam_stem(word)
-			rtrans = self.transliteration(root)
-			self.analyzed_data.append({'arabic': word, 'transl': tans, 'root': root, 'root_transl': rtrans, 'candidates': possible_root})
-
-
 	def stem(self, word):
 		"""
 			Get word stem (NLTK ISRIStemmer)
@@ -172,188 +90,164 @@ class Arabycia:
 		stem = str(self.stemmer.stem(word))
 		return stem
 
-
-	def pam_stem(self, str):
+	def analyze_text(self):
 		"""
-			Get all root candidates.
-			[Before using compatibility Table to eliminate some]
-			:param str: string : Word.
-			:return: stems : array : all root candidates
+			apply some analysis to a text ('raw_data') using pyaramorph lib
+			:return: sents : array : the analysis data
 		"""
-		stems = []
-		data = self.analyzer.analyze_text(str)[1]
-		for i in data:
-			stems.append(self.reverse_transliteration(i))
-		return stems
+		if len(self.raw_text):
+			self.full_analyzed_data = self.analyzer.analyze_text(self.raw_text)
+			return self.full_analyzed_data
 
-
-	def search(self, key):
+	def text_search(self, key):
 		"""
 			Search for word that have the same root as 'key' (Text Search)
 			:param key: string : Search keyword.
 			:return: result: array : original words from the text with the same root.
 		"""
 		result = []
-		self.extract_data()
-		data = self.analyzed_data
+		text = self.raw_text.split()
 
-		for i in range(0, len(data)):
-			if data[i]['root'] == key or key in data[i]['candidates']:
-				result.append(data[i]['arabic'])
+		for word in text:
+			if key == self.stem(word):
+				result.append(word)
 
-		print("Result : ", set(result))
-		return set(result)
+		return list(set(result))
 
-
-	def data_process(self):
+	def load_corpus(self, path, filenum = 50):
 		"""
-			process the result data from pyaramorph & put it in organized way
-		"""
-		data = self.full_analyzed_data
-		all = []
-		for ele in range(0, len(data)):
-			solution = []
-			pos = []
-			gloss = []
-			eg = ''
-			ar = ''
-			for i in range(0, len(data[ele])):
-				for k, v in data[ele][i].items():
-					if k == 'transl': eg = v
-					if k == 'arabic': ar = v
-					if k == 'solution': solution.append(v)
-					if k == 'pos': pos.append(v)
-					if k == 'gloss': gloss.append(v)
-			temp = {'transl': eg, 'arabic': ar, 'solution': solution, 'pos': pos, 'gloss': gloss}
-			all.append(temp)
-		self.processed_data = all
-
-
-	def load_corpus(self, corpus):
-		"""
-			Load Text files as a corpus (With diacritics [Tashkeela-arabic-diacritized-text-utf8-0.3]).
+			Load all Sinai-Corpus content
 			:param filename: path to the file
 			:return:
 		"""
-		import os
-		sub_corpus_files = os.listdir(corpus)
+		self.corpus = SinaiCorpusload.load_corpus(path, filenum)
+		self.corpus = self.corpus.split('\n')
+		return self.corpus
 
-		for corpus_name in sub_corpus_files:
-			content_files = os.listdir("{}/{}".format(corpus, corpus_name))
-
-			for file in content_files:
-				filename = '{}/{}/{}'.format(corpus, corpus_name, file)
-				# print('Loading {} '.format(filename))
-
-				f = open(filename, 'r', encoding='utf-8')
-				content = f.read()
-				self.corpus += str(content) + " "
-
-				break
-
-
-	def replace_sub(self, text, str, sub):
-		"""
-			function to replace a certain substring.
-			[Python's replace string function isn't working so well with diacritized text]
-			:param text: the whole text
-			:param str: a certain string in the text
-			:param sub: substring
-			:return: the new text after replacing a certain string with the substring
-		"""
-		nw = ''
-		for w in text.split():
-			if w == str:
-				nw += sub + " "
-			else:
-				nw += w + " "
-		return nw
-
-
-	def ambig(self):
+	def find_ambiguity(self):
 		"""
 			Find all the ambiguous words.
 			(After text_analysis the word with one solution is considered unambiguous, otherwise it's ambiguous)
+			:return:
+		"""
+		self.ambiguous_words = []
+		for word in self.full_analyzed_data:
+			if len(word['solution']) > 1:
+				self.ambiguous_words.append(word['arabic'])
+
+		self.ambiguous_words = list(set(self.ambiguous_words))
+		self.solve_unambiguity()
+
+		return self.ambiguous_words
+
+	def solve_unambiguity(self):
+		"""
+			Solve any unambiguous word, and add its diacritics.
+			Note: After text_analysis the word with one solution is considered unambiguous, otherwise it's ambiguous)
 			add diacritics for unambiguous words
 			:return:
 		"""
-		for w in self.processed_data:
-			temp = []
-			uniq = [] # get rid of any duplicate
-			for sol in w['solution']:
-				if sol[0] in uniq:
-					break
-				temp.append(sol[2])
-				uniq.append(sol[0])
-			if len(set(temp))>1:
-				self.ambig_words.append(w['arabic'])
+		self.analyzed_text_result = []
+		self.diacritized_text = self.raw_text
+		self.diacritized_text_pos = ""
+		raw = self.raw_text
 
-		self.ambig_words = list(set(self.ambig_words))
+		for word in raw.split():
+			if word not in self.ambiguous_words:
+				for possible_word in self.full_analyzed_data:
+					if possible_word['arabic'] == word:
+						diacritized_word = possible_word['solution'][0]['word'][0]
+						diacritized_word_pos = possible_word['solution'][0]['pos'][1]
+						self.diacritized_text_pos += diacritized_word_pos + " "
+						self.diacritized_text = self.diacritized_text.replace(word, diacritized_word)
+						self.analyzed_text_result.append({'transl': possible_word['transl'],
+														  'arabic': possible_word['arabic'],
+														  'word': possible_word['solution'][0]['word'],
+														  'pos': possible_word['solution'][0]['pos'],
+														  'gloss': possible_word['solution'][0]['gloss']
+														  })
+			else:
+				self.diacritized_text_pos += "? "
+		return self.diacritized_text
 
-		# Add diacritics
-		raw = self.raw_data
-		temp = raw
-		for w in raw.split():
-			if w not in self.ambig_words:
-				# print(w)
-				for t in self.processed_data:
-					if t['arabic'] == w:
-						if t['solution']:
-										for sol in t['solution'][0]:
-											self.raw_data = self.replace_sub(self.raw_data, w, sol)
-											break
-
-
-	def generate_cand(self):
+	def generate_candidates(self):
 		"""
 			foreach ambiguous word find all unambiguous candidates that can be solution.
 			[one to be selected later]
 			:return: all candidates
 		"""
-		cand = []
-		for w in self.ambig_words:
+		candidates = []
+		for word in self.ambiguous_words:
 			temp = []
-			for itr in self.processed_data:
-				if itr['arabic'] == w:
-					for sw in itr['solution']:
-						if sw[0] in temp:
-							continue
-						else:
-							temp.append(sw[0])
-			cand.append(temp)
-		return cand
+			for possible_word in self.full_analyzed_data:
+				if possible_word['arabic'] == word:
+					if possible_word not in temp: temp.append(possible_word)
+			candidates.append(temp)
+		self.candidates = candidates
+		return self.candidates
 
+	def find_index(self, word):
+		text = self.raw_text.split()
+		return text.index(word)
 
-	def select_cand(self):
+	def select_candidate(self):
 		"""
 			Select the best candidate.
 			Replace the best candidate with the original ambiguous word.
 			:return:
 		"""
-		cands = self.generate_cand()
-		ambgs = self.ambig_words
-		sent = self.raw_data
-		spsent = sent.split()
-		# Generate the sub-sentence
-		for i in range(0, len(self.ambig_words)):
-			best_p = -1
-			best_word = ''
-			for ii in range(0, len(cands[i])):
-				subsent = ''
-				id = [spsent.index(w) for w in spsent if re.search(ambgs[i], w)][0]
-				if id != 0:
-					subsent = spsent[id - 1] + " " + cands[i][ii]
-				else:
-					subsent = cands[i][ii] # Sentence starts with ambiguous Word
-				p = self.bigram(subsent)
+		candidates = self.candidates
+		ambiguous = self.ambiguous_words
+		words = self.raw_text.split()
+		pos = self.diacritized_text_pos.split()
 
-				if p > best_p:
-					best_p = p
-					best_word = cands[i][ii]
-			self.raw_data = self.replace_sub(self.raw_data, ambgs[i], best_word)
+		for i in range(0,len(words)):
+			if pos[i] == "?" and pos[i-1] != "?" and (i-1)>=0:
+				NEXT = self.find_index(words[i])
+				PERV = NEXT - 1
+				cand_index = ambiguous.index(words[NEXT])
+				prob = 0
+				cand_best = -1
+				ocurrence_count_best = -1
+				transl = candidates[cand_index][0]['transl']
+				arabic = candidates[cand_index][0]['arabic']
+				for solution in candidates[cand_index][0]['solution']:
+					cand_pos = solution['pos'][1]
+					current_cand_prob, ocurrence_count = self.prob(pos[PERV], cand_pos)
+					if current_cand_prob > prob or (current_cand_prob == prob and ocurrence_count > ocurrence_count_best):
+						prob = current_cand_prob
+						cand_best = solution
+						ocurrence_count_best = ocurrence_count
+				self.diacritized_text = self.diacritized_text.replace(words[NEXT], cand_best['word'][0])
+				pos[i] = cand_best['pos'][1]
+				self.diacritized_text_pos = " ".join(pos)
 
+				self.analyzed_text_result.append({'transl': transl,
+												  'arabic': arabic,
+												  'word': cand_best['word'],
+												  'pos': cand_best['pos'],
+												  'gloss': cand_best['gloss'] })
 
-	def prob(self, w1, w2):
+		return self.analyzed_text_result
+
+	def search(self, text, key):
+		return [sent for sent in text if re.search(key, sent)]
+
+	def get_subsentences(self, sents, key):
+		subsentences = []
+		for sent in sents:
+			words = sent.split()
+			for i in range(0, len(words)):
+				if key in words[i] and i >= 0 and i < len(words) - 1:
+					subsentences.append(words[i + 1])
+		return subsentences
+
+	def split(self, str, returnval="pos"):
+		str = str.split('/')
+		if returnval is "pos": return str[1]
+		else: return str[0]
+
+	def prob(self, word1, word2):
 		"""
 			compute the probability of the given two words.
 			prob = count(w1 | w2) / count(w1)
@@ -361,72 +255,18 @@ class Arabycia:
 			:param w2:
 			:return:
 		"""
-		count_w1_w2 = 0
-		dic = self.corpus.split()
-		for i in range(0, len(dic)-1):
-						if self.similarty(w1, dic[i]) and self.similarty(w2, dic[i+1]):
-										count_w1_w2 += 1
-
-		key = str(w1)
-		count_w1 = len([w for w in self.corpus.split() if self.similarty(key, w)])
-		p = count_w1_w2 / float(count_w1 + 1)
-
-		return p
+		w1 = self.split(word1, "pos")
+		w2 = self.split(word2, "pos")
+		count_word2 = len(self.search(self.corpus, self.split(word2, "word")))
+		filter = self.search(self.corpus, w1)
+		count_w1 = self.get_subsentences(filter, w1)
+		count_w1_w2 = self.search(count_w1, w2)
 
 
-	def bigram(self, sents):
-		"""
-			Apply bigram to sentence
-			:param sents: sentence of two words at least.
-			:return: probability
-		"""
-		words = sents.split()
-		p = 1
-		for i in range(0, len(words) - 1):
-			p *= self.prob(words[i], words[i + 1])
-		return p
+		prob = len(count_w1_w2) / float(len(count_w1))
+		if w1 == w2: prob /= 2
 
-
-	def pos_split(self, pos):
-		"""
-			Used to split (preprocess) POS before printing it.
-			:param pos: string
-			:return:
-		"""
-		data = ''
-		disc = ''
-		for i in pos:
-			if i == '':
-				continue
-			else:
-				str = i.split('/')
-				if data != '':
-					data += ' + ' + self.reverse_transliteration(str[0]).replace('+', '')
-					disc += ' + ' + str[1]
-				else:
-					data += self.reverse_transliteration(str[0]).replace('+', '')
-					disc += str[1].replace('+', '')
-		return data, disc
-
-
-	def final_result(self):
-		"""
-			Prepare the final result
-			:return: list contain the final result
-		"""
-		result = []
-		sent = self.raw_data
-		sent = sent.split()
-		for itr in range(0, len(self.processed_data)):
-			for p in range(0, len(self.processed_data[itr]['solution'])):
-				if self.processed_data[itr]['solution'][p][0] in sent:
-					result.append([
-						self.processed_data[itr]['solution'][p],
-						self.processed_data[itr]['gloss'][p],
-						self.processed_data[itr]['pos'][p]
-					])
-		return result
-
+		return prob, count_word2
 
 	def print_result(self):
 		"""
@@ -434,44 +274,31 @@ class Arabycia:
 			:return:
 		"""
 		print('Sentence :')
-		print(self.org_data)
+		print(self.raw_text)
 		print('With Diacritics :')
-		print(self.raw_data)
+		print(self.diacritized_text)
+		print('POS :')
+		print(self.diacritized_text_pos)
 
-		data = self.final_result()
-		unique_wd =[]
-		res = ''
+		for result in self.analyzed_text_result:
+			word  = '\nWord  : \t' + '\t'.join(filter(None, result['word']))
+			root  = '\nRoot  : \t' + self.stemming(result['word'][0])[0]
+			gloss = '\nGloss : \t' + result['gloss'][1]
+			pos   = '\nPOS   : \t' + '\t'.join(filter(None, result['pos']))
+			print(word, root, pos, gloss)
 
-		for i in data:
-			if i[0][0] not in unique_wd:
-				unique_wd.append(i[0][0])
-				Gloss = '| '
-				POS = '| '
-				trans = '\'' + i[0][1] + '\''
-
-				gloss = []
-				pos = []
-
-				for dup in data:
-					if dup[0][0] == i[0][0]:
-						if dup[1][1] not in gloss:
-							gloss.append(dup[1][1])
-							pos.append(i[2])
-
-				for ii in range(0, len(gloss)):
-					Gloss += gloss[ii].replace(';', ' | ').replace('/', ' | ') + ' | '
-					POS = '| ' + self.pos_split(pos[ii])[1] + ' | '
-
-				word = '\nWord  : \t\t' + '\'' + i[0][0] + '\''
-				word2 = '\nWord  : \t\t' + '\'' + self.pos_split(i[2])[0] + '\''
-				trans = '\ntrans : \t\t' + trans
-				Gloss = '\nGloss : \t\t' + Gloss
-				POS = '\nPOS   : \t\t' + POS
-				print(word, word2, trans, Gloss, POS)
-
-				res += word + word2 + trans + Gloss + POS + "\n"
-		return self.raw_data, res
+		return self.analyzed_text_result
 
 
-# text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
-# ara = Arabycia(text)
+arabycia = Arabycia()
+
+text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
+arabycia.set_raw_text(text)
+arabycia.analyze()
+
+text = 'يستجمع المؤرخ أفكاره'
+arabycia.set_raw_text(text)
+arabycia.analyze()
+search_result = arabycia.text_search("جمع")
+print(search_result)
+
