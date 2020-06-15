@@ -6,8 +6,8 @@ import pyaramorph
 import SinaiCorpus.load as SinaiCorpusload
 
 class Arabycia:
+
 	def __init__(self):
-		self.raw_text = text
 		self.analyzer = pyaramorph.Analyzer()
 		self.stemmer = nltk.ISRIStemmer()
 		self.lemmatizer = nltk.WordNetLemmatizer()
@@ -255,7 +255,6 @@ class Arabycia:
 			:param w2:
 			:return:
 		"""
-
 		w1 = self.split(word1, "pos")
 		w2 = self.split(word2, "pos")
 		count_word2 = len(self.search(self.corpus, self.split(word2, "word")))
@@ -302,3 +301,4 @@ arabycia.set_raw_text(text)
 arabycia.analyze()
 search_result = arabycia.text_search("جمع")
 print(search_result)
+
