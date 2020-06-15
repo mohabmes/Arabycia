@@ -11,14 +11,15 @@ class Arabycia:
 		self.analyzer = pyaramorph.Analyzer()
 		self.stemmer = nltk.ISRIStemmer()
 		self.lemmatizer = nltk.WordNetLemmatizer()
+		self.segmenter = nltk.data.load("tokenizers/punkt/english.pickle")
 
+	def analyze(self):
 		self.analyze_text()
 		self.find_ambiguity()
 		self.generate_candidates()
 		self.load_corpus("SinaiCorpus/src/Sinai-corpus.zip", 60)
 		self.select_candidate()
 		self.print_result()
-
 
 	def tokenization(self, txt):
 		"""
@@ -35,7 +36,7 @@ class Arabycia:
 			:param txt: string : arabic text
 			:return: stems : array : array contains a stem for each word in the text
 		"""
-		stems = str([self.stemmer.stem(w) for w in self.tokenization(txt)])
+		stems = [self.stemmer.stem(w) for w in self.tokenization(txt)]
 		return stems
 
 	def lemmatization(self, txt):
@@ -98,23 +99,20 @@ class Arabycia:
 			self.full_analyzed_data = self.analyzer.analyze_text(self.raw_text)
 			return self.full_analyzed_data
 
+	def text_search(self, key):
+		"""
+			Search for word that have the same root as 'key' (Text Search)
+			:param key: string : Search keyword.
+			:return: result: array : original words from the text with the same root.
+		"""
+		result = []
+		text = self.raw_text.split()
 
-	# def search(self, key):
-	# 	"""
-	# 		Search for word that have the same root as 'key' (Text Search)
-	# 		:param key: string : Search keyword.
-	# 		:return: result: array : original words from the text with the same root.
-	# 	"""
-	# 	result = []
-	# 	self.extract_data()
-	# 	data = self.analyzed_data
-	#
-	# 	for i in range(0, len(data)):
-	# 		if data[i]['root'] == key or key in data[i]['candidates']:
-	# 			result.append(data[i]['arabic'])
-	#
-	# 	print("Result : ", set(result))
-	# 	return set(result)
+		for word in text:
+			if key == self.stem(word):
+				result.append(word)
+
+		return list(set(result))
 
 	def load_corpus(self, path, filenum = 50):
 		"""
@@ -191,7 +189,6 @@ class Arabycia:
 	def find_index(self, word):
 		text = self.raw_text.split()
 		return text.index(word)
-
 
 	def select_candidate(self):
 		"""
@@ -272,7 +269,6 @@ class Arabycia:
 
 		return prob, count_word2
 
-
 	def print_result(self):
 		"""
 			Reformat the output & print it.
@@ -286,18 +282,23 @@ class Arabycia:
 		print(self.diacritized_text_pos)
 
 		for result in self.analyzed_text_result:
-			word = '\nWord  : \t' + " | ".join(result['word'])
-			gloss = '\nGloss : \t' + " ".join(result['gloss'])
-			pos = '\nPOS   : \t' + " + ".join(result['pos'])
-			print(word, pos, gloss)
+			word  = '\nWord  : \t' + '\t'.join(filter(None, result['word']))
+			root  = '\nRoot  : \t' + self.stemming(result['word'][0])[0]
+			gloss = '\nGloss : \t' + result['gloss'][1]
+			pos   = '\nPOS   : \t' + '\t'.join(filter(None, result['pos']))
+			print(word, root, pos, gloss)
 
 		return self.analyzed_text_result
 
 
-text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
-# text = 'يستجمع الكاتب أفكاره'
 arabycia = Arabycia()
+
+text = 'يستعيد الكاتب في هذه الرواية كيف تحولت من مدينة للانوار الي مدينة للاشباح'
 arabycia.set_raw_text(text)
-# arabycia.test()
-# ara.search('رحم')
-# ara.print_result()
+arabycia.analyze()
+
+text = 'يستجمع المؤرخ أفكاره'
+arabycia.set_raw_text(text)
+arabycia.analyze()
+search_result = arabycia.text_search("جمع")
+print(search_result)
