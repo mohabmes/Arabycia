@@ -131,9 +131,9 @@ class Arabycia:
 			:return:
 		"""
 		self.ambiguous_words = []
-		for word in self.full_analyzed_data:
-			if len(word['solution']) > 1:
-				self.ambiguous_words.append(word['arabic'])
+		for index in range(len(self.full_analyzed_data)):
+			if len(self.full_analyzed_data[index]['solution']) > 1:
+				self.ambiguous_words.append(self.full_analyzed_data[index]['arabic'])
 
 		self.ambiguous_words = list(set(self.ambiguous_words))
 		self.solve_unambiguity()
